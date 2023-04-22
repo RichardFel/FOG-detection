@@ -28,16 +28,22 @@ def rotation(df):
 def filt_high(input_signal,  fs, cutoff_h , order =1):
     '''
     Butterworth highpass filter
-    '''                                       
+    '''
     b, a = signal.butter(order, (cutoff_h / (fs / 2)), 'high')
     return signal.filtfilt(b,a, input_signal)
 
 def filt_low(input_signal,  fs, cutoff_l , order =1):
     '''
     Butterworth lowpass filter
-    '''                                       
+    '''
     b, a = signal.butter(order, (cutoff_l / (fs / 2)), 'low')
     return signal.filtfilt(b,a, input_signal)
+
+def normalisation(input_signal):
+    # min score: -4G
+    # Max score: 4G
+    return (input_signal -- 4) / (4 -- 4) * 2 - 1
+
 
 #%%
 
@@ -60,19 +66,24 @@ for file in os.listdir('Raw_data/train/defog'):
     acceleration['AccAP_filt'] = filt_high(acceleration['AccAP_rot'], fs = 100 , cutoff_h = 0.01)
     acceleration['AccAP_filt'] = filt_low(acceleration['AccAP_filt'], fs = 100 , cutoff_l = 10)
 
+    # Normalise signal to be between -1, 1
+    acceleration['AccV_norm'] = normalisation(acceleration['AccV_filt'])
+    acceleration['AccML_norm'] = normalisation(acceleration['AccML_filt'])
+    acceleration['AccAP_norm'] = normalisation(acceleration['AccAP_filt'])
+
     # plot remaining data
-    # 
-    # ax = plt.plot(acceleration['AccV_filt'])
+    # fig, ax = plt.subplots()
+    # ax = plt.plot(acceleration['AccV_norm'])
 
     #  Wavelet transform
-    wavelet = "mexh" # mother wavelet
+    wavelet = "morl" # mother wavelet
     scales = np.arange(1, 32)
 
-    coeffs_v, freqs = pywt.cwt(acceleration['AccV_filt'], scales, wavelet = wavelet)
+    coeffs_v, freqs = pywt.cwt(acceleration['AccV_norm'], scales, wavelet = wavelet)
     coeffs_v = pd.DataFrame(coeffs_v.T)
-    coeffs_ML, freqs = pywt.cwt(acceleration['AccML_filt'], scales, wavelet = wavelet)
+    coeffs_ML, freqs = pywt.cwt(acceleration['AccML_norm'], scales, wavelet = wavelet)
     coeffs_ML = pd.DataFrame(coeffs_ML.T)
-    coeffs_AP, freqs = pywt.cwt(acceleration['AccAP_filt'], scales, wavelet = wavelet)
+    coeffs_AP, freqs = pywt.cwt(acceleration['AccAP_norm'], scales, wavelet = wavelet)
     coeffs_AP = pd.DataFrame(coeffs_AP.T)
 
     for i in coeffs_AP.columns:
